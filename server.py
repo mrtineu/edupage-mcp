@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import date, datetime, time
 from typing import TypeVar
 
 from dotenv import load_dotenv
@@ -30,7 +31,7 @@ from edupage_api.subjects import Subject
 from edupage_api.substitution import Action, TimetableChange
 from edupage_api.timeline import EventType, TimelineEvent
 from edupage_api.timetables import Lesson, Timetable
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 _ = load_dotenv()
 
@@ -414,6 +415,131 @@ _SERIALIZER_REGISTRY = (
 )
 
 _INTERNAL_CALLS = (_call_edupage,)
+
+
+@mcp.tool()
+async def get_timetable(ctx: Context, date_str: str | None = None) -> str:
+    """Get the student's timetable for a specific date.
+
+    Args:
+        date_str: Date in ISO format (YYYY-MM-DD). If None, returns today's timetable.
+
+    Returns:
+        JSON string with list of lessons or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        target_date = date.fromisoformat(date_str) if date_str else date.today()
+
+        timetable = await _call_edupage(
+            edupage_ctx, edupage_ctx.edupage.get_my_timetable, target_date
+        )
+
+        if timetable is None:
+            return json.dumps(
+                {"message": "No timetable data available for this date"}, indent=2
+            )
+
+        serialized = [_serialize_lesson(lesson) for lesson in timetable.lessons]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except ValueError as e:
+        return json.dumps({"error": f"Invalid date format: {str(e)}"}, indent=2)
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_timetable: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_grades(
+    ctx: Context, year: int | None = None, term: str | None = None
+) -> str:
+    """Get the student's grades, optionally filtered by year and term.
+
+    Args:
+        year: School year (e.g., 2024). Must be provided if term is specified.
+        term: Term/semester ("P1" or "P2"). Must be provided if year is specified.
+
+    Returns:
+        JSON string with list of grades or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        if (year is None) != (term is None):
+            return json.dumps(
+                {"error": "Both year and term must be provided together, or neither"},
+                indent=2,
+            )
+
+        if term is not None and term not in ["P1", "P2"]:
+            return json.dumps({"error": "term must be 'P1' or 'P2'"}, indent=2)
+
+        if year is not None and term is not None:
+            from edupage_api.grades import Term
+
+            term_enum = Term(term)
+            grades = await _call_edupage(
+                edupage_ctx, edupage_ctx.edupage.get_grades_for_term, year, term_enum
+            )
+        else:
+            grades = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_grades)
+
+        if not grades:
+            return json.dumps({"message": "No grades available"}, indent=2)
+
+        serialized = [_serialize_grade(grade) for grade in grades]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_grades: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
+    """Get timeline notifications, optionally filtered from a start date.
+
+    Args:
+        date_from: Start date in ISO format (YYYY-MM-DD). If None, returns recent notifications.
+
+    Returns:
+        JSON string with list of timeline events or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        if date_from:
+            start_date = date.fromisoformat(date_from)
+            notifications = await _call_edupage(
+                edupage_ctx,
+                edupage_ctx.edupage.get_notifications_history,
+                start_date,
+            )
+        else:
+            notifications = await _call_edupage(
+                edupage_ctx, edupage_ctx.edupage.get_notifications
+            )
+
+        if not notifications:
+            return json.dumps({"message": "No notifications available"}, indent=2)
+
+        serialized = [_serialize_timeline_event(event) for event in notifications]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except ValueError as e:
+        return json.dumps({"error": f"Invalid date format: {str(e)}"}, indent=2)
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_notifications: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")
