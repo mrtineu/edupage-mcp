@@ -518,7 +518,7 @@ async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
             start_date = date.fromisoformat(date_from)
             notifications = await _call_edupage(
                 edupage_ctx,
-                edupage_ctx.edupage.get_notifications_history,
+                edupage_ctx.edupage.get_notification_history,
                 start_date,
             )
         else:
