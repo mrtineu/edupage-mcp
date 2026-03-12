@@ -641,5 +641,121 @@ async def get_subjects(ctx: Context) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
+@mcp.tool()
+async def get_meals(ctx: Context, date_str: str | None = None) -> str:
+    """Get the school meal menu for a specific date.
+
+    Args:
+        date_str: Date in ISO format (YYYY-MM-DD). If None, returns today's meal menu.
+
+    Returns:
+        JSON string with meal data (snack, lunch, afternoon_snack) or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        if date_str:
+            try:
+                target_date = date.fromisoformat(date_str)
+            except ValueError as e:
+                return json.dumps({"error": f"Invalid date format: {e}"}, indent=2)
+        else:
+            target_date = date.today()
+
+        result = await _call_edupage(
+            edupage_ctx, edupage_ctx.edupage.get_meals, target_date
+        )
+
+        if result is None:
+            return json.dumps({"message": "No meals data available"}, indent=2)
+
+        serialized = _serialize_meals(result)
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_meals: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_timetable_changes(ctx: Context, date_str: str | None = None) -> str:
+    """Get timetable substitutions/changes for a specific date.
+
+    Args:
+        date_str: Date in ISO format (YYYY-MM-DD). If None, returns today's timetable changes.
+
+    Returns:
+        JSON string with list of timetable changes or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        if date_str:
+            try:
+                target_date = date.fromisoformat(date_str)
+            except ValueError as e:
+                return json.dumps({"error": f"Invalid date format: {e}"}, indent=2)
+        else:
+            target_date = date.today()
+
+        result = await _call_edupage(
+            edupage_ctx, edupage_ctx.edupage.get_timetable_changes, target_date
+        )
+
+        if result is None:
+            return json.dumps({"message": "No timetable changes available"}, indent=2)
+
+        serialized = [_serialize_timetable_change(item) for item in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_timetable_changes: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_missing_teachers(ctx: Context, date_str: str | None = None) -> str:
+    """Get list of absent teachers for a specific date.
+
+    Args:
+        date_str: Date in ISO format (YYYY-MM-DD). If None, returns today's missing teachers.
+
+    Returns:
+        JSON string with list of missing teachers or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        if date_str:
+            try:
+                target_date = date.fromisoformat(date_str)
+            except ValueError as e:
+                return json.dumps({"error": f"Invalid date format: {e}"}, indent=2)
+        else:
+            target_date = date.today()
+
+        result = await _call_edupage(
+            edupage_ctx, edupage_ctx.edupage.get_missing_teachers, target_date
+        )
+
+        if result is None:
+            return json.dumps(
+                {"message": "No missing teachers data available"}, indent=2
+            )
+
+        serialized = [_serialize_account(teacher) for teacher in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_missing_teachers: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
