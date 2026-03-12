@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edupage-mcp"
+version = "0.1.0"
+description = "Edupage API integration with Model Context Protocol"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]",
+    "edupage-api",
+    "python-dotenv",
+]
+
+[project.scripts]
+edupage-mcp = "server:main"
+
+[project.optional-dependencies]
+dev = []
