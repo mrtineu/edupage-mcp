@@ -541,5 +541,105 @@ async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
+@mcp.tool()
+async def get_teachers(ctx: Context) -> str:
+    """Get all teachers at the school.
+
+    Returns:
+        JSON string with list of teachers or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_teachers)
+
+        if result is None:
+            return json.dumps({"message": "No teachers data available"}, indent=2)
+
+        serialized = [_serialize_account(teacher) for teacher in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_teachers: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_students(ctx: Context) -> str:
+    """Get students in your class.
+
+    Returns:
+        JSON string with list of students or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_students)
+
+        if result is None:
+            return json.dumps({"message": "No students data available"}, indent=2)
+
+        serialized = [_serialize_account(student) for student in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_students: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_classes(ctx: Context) -> str:
+    """Get all classes at the school.
+
+    Returns:
+        JSON string with list of classes or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_classes)
+
+        if result is None:
+            return json.dumps({"message": "No classes data available"}, indent=2)
+
+        serialized = [_serialize_class(cls) for cls in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_classes: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_subjects(ctx: Context) -> str:
+    """Get all subjects taught at the school.
+
+    Returns:
+        JSON string with list of subjects or error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.lifespan_context
+
+        result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_subjects)
+
+        if result is None:
+            return json.dumps({"message": "No subjects data available"}, indent=2)
+
+        serialized = [_serialize_subject(subj) for subj in result]
+        return json.dumps(serialized, ensure_ascii=False, indent=2)
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_subjects: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
