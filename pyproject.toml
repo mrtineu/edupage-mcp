@@ -36,10 +36,11 @@ Repository = "https://github.com/mrtineu/edupage-mcp"
 Issues = "https://github.com/mrtineu/edupage-mcp/issues"
 
 [project.scripts]
-edupage-mcp = "server:main"
+edupage-mcp = "edupage_mcp.app:main"
 
 [project.optional-dependencies]
 dev = []
 
 [tool.setuptools]
+packages = ["edupage_mcp"]
 py-modules = ["server"]

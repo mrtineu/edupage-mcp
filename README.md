@@ -14,13 +14,14 @@ Supported tools:
 - `get_classes`
 - `get_subjects`
 - `get_meals`
+- `get_substitutions`
 - `get_timetable_changes`
 
 Experimental tool:
 
 - `get_missing_teachers`
 
-`get_missing_teachers` is exposed, but it is currently unreliable because of an upstream `edupage-api` parsing issue on some schools.
+`get_missing_teachers` is exposed, but some schools block teacher substitution visibility entirely, so it may return an availability message instead of teacher data.
 
 ## Requirements
 
@@ -110,6 +111,7 @@ Add this to your Claude Desktop MCP config:
 | `get_classes` | none | School classes. |
 | `get_subjects` | none | School subjects. |
 | `get_meals` | `date_str` | Meal menu for a date. Defaults to today. |
+| `get_substitutions` | `date_str` | Raw substitution rows for a date. Defaults to today. |
 | `get_timetable_changes` | `date_str` | Timetable changes for a date. Defaults to today. |
 | `get_missing_teachers` | `date_str` | Absent teachers for a date. Experimental. |
 
@@ -120,25 +122,7 @@ Add this to your Claude Desktop MCP config:
 - Parent and teacher accounts are not verified
 - Depends on upstream `edupage-api` behavior
 
-## Publish
 
-Build the package:
-
-```bash
-uv build
-```
-
-Publish manually:
-
-```bash
-uv publish
-```
-
-Or with a token:
-
-```bash
-UV_PUBLISH_TOKEN=your-pypi-token uv publish
-```
 
 ## Acknowledgements
 
