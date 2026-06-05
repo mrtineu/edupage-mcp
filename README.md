@@ -1,93 +1,147 @@
-# EduPage MCP Server
+# edupage-mcp
 
-An MCP server that enables AI agents to query student data from EduPage. This server provides tools to access timetables, grades, notifications, and more through the Model Context Protocol.
+`edupage-mcp` is a read-only MCP server for EduPage. It lets MCP clients and agents query timetable data, grades, notifications, meals, and school metadata through the `edupage-api` library.
 
-## 1. Project Title and Description
-The EduPage MCP Server is a bridge between the EduPage school platform and AI agents. It uses the `edupage-api` library to securely fetch information and exposes it via the Model Context Protocol (MCP).
+## Supported Features
 
-Available tools include:
-- `get_timetable`: Get the student's timetable for a specific date.
-- `get_grades`: Get the student's grades, optionally filtered by year and term.
-- `get_notifications`: Get timeline notifications, optionally filtered from a start date.
-- `get_teachers`: Get all teachers at the school.
-- `get_students`: Get students in your class.
-- `get_classes`: Get all classes at the school.
-- `get_subjects`: Get all subjects taught at the school.
-- `get_meals`: Get the school meal menu for a specific date.
-- `get_timetable_changes`: Get timetable substitutions/changes for a specific date.
-- `get_missing_teachers`: Get list of absent teachers for a specific date.
+Supported tools:
 
-## 2. Prerequisites
-- Python 3.10 or higher
-- An EduPage student account (without 2FA enabled)
-- Your school's EduPage subdomain (e.g., if your school is at `schoolname.edupage.org`, the subdomain is `schoolname`)
+- `get_timetable`
+- `get_grades`
+- `get_notifications`
+- `get_teachers`
+- `get_students`
+- `get_classes`
+- `get_subjects`
+- `get_meals`
+- `get_timetable_changes`
 
-## 3. Setup
-1. Clone or download this project
-2. Create a virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -e .
-   ```
-4. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-5. Fill in your credentials in `.env`:
-   - `EDUPAGE_USERNAME`: Your EduPage username
-   - `EDUPAGE_PASSWORD`: Your EduPage password
-   - `EDUPAGE_SUBDOMAIN`: Your school's subdomain
+Experimental tool:
 
-## 4. Running
-### Direct Execution
-```bash
-python server.py
+- `get_missing_teachers`
+
+`get_missing_teachers` is exposed, but it is currently unreliable because of an upstream `edupage-api` parsing issue on some schools.
+
+## Requirements
+
+- Python `3.10+`
+- `uv`
+- An EduPage account
+- EduPage 2FA disabled
+- Your school subdomain from `https://<subdomain>.edupage.org`
+
+Environment variables:
+
+```env
+EDUPAGE_USERNAME=your_username
+EDUPAGE_PASSWORD=your_password
+EDUPAGE_SUBDOMAIN=your_school_subdomain
 ```
 
-### With MCP CLI
+## Run It
+
+Install and run from PyPI with `uvx`:
+
 ```bash
-mcp run server.py
+uvx edupage-mcp
 ```
 
-## 5. OpenCode Configuration
-To use this server with an MCP client like OpenCode, add the following configuration to your `mcp.json`:
+For local development:
+
+```bash
+uv sync
+uv run edupage-mcp
+```
+
+The server uses stdio transport, so it is meant to be launched by an MCP client.
+
+## MCP Setup
+
+### OpenCode
+
+Add this to `~/.config/opencode/opencode.json` or project `opencode.json`:
 
 ```json
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "edupage": {
-      "command": "python",
-      "args": ["/absolute/path/to/server.py"],
-      "env": {
+      "type": "local",
+      "command": ["uvx", "edupage-mcp"],
+      "environment": {
         "EDUPAGE_USERNAME": "your_username",
         "EDUPAGE_PASSWORD": "your_password",
-        "EDUPAGE_SUBDOMAIN": "your_school"
+        "EDUPAGE_SUBDOMAIN": "your_school_subdomain"
       }
     }
   }
 }
 ```
 
-## 6. Available Tools
-| Tool Name | Parameters | Description |
-|-----------|------------|-------------|
-| `get_timetable` | `date_str: str` (optional) | Get the student's timetable for a specific date. Defaults to today. |
-| `get_grades` | `year: int`, `term: str` (optional) | Get the student's grades. Both `year` and `term` ("P1" or "P2") must be provided together. |
-| `get_notifications` | `date_from: str` (optional) | Get timeline notifications, optionally filtered from a start date. |
-| `get_teachers` | None | Get all teachers at the school. |
-| `get_students` | None | Get students in your class. |
-| `get_classes` | None | Get all classes at the school. |
-| `get_subjects` | None | Get all subjects taught at the school. |
-| `get_meals` | `date_str: str` (optional) | Get the school meal menu for a specific date. Defaults to today. |
-| `get_timetable_changes` | `date_str: str` (optional) | Get timetable substitutions/changes for a specific date. Defaults to today. |
-| `get_missing_teachers` | `date_str: str` (optional) | Get list of absent teachers for a specific date. Defaults to today. |
+### Claude Desktop
 
-## 7. Limitations
-- **Read-only**: This server does not support sending messages or uploading files.
-- **Student accounts only**: Parent and teacher accounts have not been tested and may not work as expected.
-- **No 2FA support**: Two-factor authentication must be disabled on your EduPage account.
-- **Session expiry**: Long-running sessions may expire. The server includes a single re-login retry mechanism to handle this transparently.
+Add this to your Claude Desktop MCP config:
+
+```json
+{
+  "mcpServers": {
+    "edupage": {
+      "command": "uvx",
+      "args": ["edupage-mcp"],
+      "env": {
+        "EDUPAGE_USERNAME": "your_username",
+        "EDUPAGE_PASSWORD": "your_password",
+        "EDUPAGE_SUBDOMAIN": "your_school_subdomain"
+      }
+    }
+  }
+}
+```
+
+## Tool Summary
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `get_timetable` | `date_str` | Timetable for a date. Defaults to today. |
+| `get_grades` | `year`, `term` | Grades, optionally filtered by school year and term. |
+| `get_notifications` | `date_from` | Notifications, optionally from a given date onward. |
+| `get_teachers` | none | Teachers at the school. |
+| `get_students` | none | Students in the logged-in student's class. |
+| `get_classes` | none | School classes. |
+| `get_subjects` | none | School subjects. |
+| `get_meals` | `date_str` | Meal menu for a date. Defaults to today. |
+| `get_timetable_changes` | `date_str` | Timetable changes for a date. Defaults to today. |
+| `get_missing_teachers` | `date_str` | Absent teachers for a date. Experimental. |
+
+## Limitations
+
+- Read-only only
+- No 2FA support
+- Parent and teacher accounts are not verified
+- Depends on upstream `edupage-api` behavior
+
+## Publish
+
+Build the package:
+
+```bash
+uv build
+```
+
+Publish manually:
+
+```bash
+uv publish
+```
+
+Or with a token:
+
+```bash
+UV_PUBLISH_TOKEN=your-pypi-token uv publish
+```
+
+## Acknowledgements
+
+This project would not be possible without the upstream `edupage-api` library:
+
+https://github.com/EdupageAPI/edupage-api

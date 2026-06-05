@@ -1,20 +1,45 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "edupage-mcp"
 version = "0.1.0"
-description = "Edupage API integration with Model Context Protocol"
+description = "Read-only EduPage MCP server for timetables, grades, notifications, meals, and school metadata"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+authors = [
+    { name = "Marin Šenkýř", email = "hello@mrtineu.com" },
+]
+keywords = ["mcp", "edupage", "education", "ai", "agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "mcp[cli]",
     "edupage-api",
     "python-dotenv",
 ]
 
+[project.urls]
+Homepage = "https://github.com/mrtineu/edupage-mcp"
+Repository = "https://github.com/mrtineu/edupage-mcp"
+Issues = "https://github.com/mrtineu/edupage-mcp/issues"
+
 [project.scripts]
 edupage-mcp = "server:main"
 
 [project.optional-dependencies]
 dev = []
+
+[tool.setuptools]
+py-modules = ["server"]

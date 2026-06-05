@@ -51,15 +51,19 @@ class EduPageContext:
     subdomain: str
 
 
-def _serialize_datetime(value: datetime | None) -> str | None:
+def _serialize_datetime(value: datetime | str | None) -> str | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        return value
     return value.isoformat()
 
 
-def _serialize_time(value: time | None) -> str | None:
+def _serialize_time(value: time | str | None) -> str | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        return value
     return value.isoformat()
 
 
@@ -428,7 +432,7 @@ async def get_timetable(ctx: Context, date_str: str | None = None) -> str:
         JSON string with list of lessons or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         target_date = date.fromisoformat(date_str) if date_str else date.today()
 
@@ -467,7 +471,7 @@ async def get_grades(
         JSON string with list of grades or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         if (year is None) != (term is None):
             return json.dumps(
@@ -512,7 +516,7 @@ async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
         JSON string with list of timeline events or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         if date_from:
             start_date = date.fromisoformat(date_from)
@@ -549,7 +553,7 @@ async def get_teachers(ctx: Context) -> str:
         JSON string with list of teachers or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_teachers)
 
@@ -574,7 +578,7 @@ async def get_students(ctx: Context) -> str:
         JSON string with list of students or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_students)
 
@@ -599,7 +603,7 @@ async def get_classes(ctx: Context) -> str:
         JSON string with list of classes or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_classes)
 
@@ -624,7 +628,7 @@ async def get_subjects(ctx: Context) -> str:
         JSON string with list of subjects or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         result = await _call_edupage(edupage_ctx, edupage_ctx.edupage.get_subjects)
 
@@ -652,7 +656,7 @@ async def get_meals(ctx: Context, date_str: str | None = None) -> str:
         JSON string with meal data (snack, lunch, afternoon_snack) or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         if date_str:
             try:
@@ -690,7 +694,7 @@ async def get_timetable_changes(ctx: Context, date_str: str | None = None) -> st
         JSON string with list of timetable changes or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         if date_str:
             try:
@@ -728,7 +732,7 @@ async def get_missing_teachers(ctx: Context, date_str: str | None = None) -> str
         JSON string with list of missing teachers or error message.
     """
     try:
-        edupage_ctx: EduPageContext = ctx.lifespan_context
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
 
         if date_str:
             try:
@@ -757,5 +761,9 @@ async def get_missing_teachers(ctx: Context, date_str: str | None = None) -> str
         return json.dumps({"error": str(e)}, indent=2)
 
 
-if __name__ == "__main__":
+def main() -> None:
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
