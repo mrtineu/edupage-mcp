@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import date
+from pathlib import Path
 
 from edupage_api.exceptions import BadCredentialsException, CaptchaException
 from edupage_api.substitution import TimetableChange
 from mcp.server.fastmcp import Context, FastMCP
 
+from .homework import download_attachment, get_homework_material
 from .runtime import EduPageContext, app_lifespan, call_edupage, logger
 from .serializers import (
     serialize_account,
@@ -29,6 +32,17 @@ mcp = FastMCP("edupage", lifespan=app_lifespan)
 
 def _parse_target_date(date_str: str | None) -> date:
     return date.fromisoformat(date_str) if date_str else date.today()
+
+
+def _base_url(edupage_ctx: EduPageContext) -> str:
+    return f"https://{edupage_ctx.subdomain}.edupage.org"
+
+
+def _default_download_dir() -> Path:
+    custom = os.getenv("EDUPAGE_DOWNLOAD_DIR", "").strip()
+    if custom:
+        return Path(custom).expanduser()
+    return Path.home() / "Downloads" / "edupage-mcp"
 
 
 @mcp.tool()
@@ -410,6 +424,89 @@ async def get_missing_teachers(ctx: Context, date_str: str | None = None) -> str
         return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
     except Exception as e:
         logger.exception(f"Error in get_missing_teachers: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_homework(ctx: Context, superid: str) -> str:
+    """Open a homework/material item and get its full content and attachments.
+
+    Homework notifications from get_notifications (event_type "homework" or
+    "etesthw") carry an `additional_data.superid` field. Pass that value here
+    to fetch the actual assignment: instructions, questions, and any files
+    the teacher attached. Attachment URLs returned here can be passed to
+    download_homework_file to save them to disk.
+
+    Args:
+        superid: The material id (superid) from a homework notification's
+            additional_data.
+
+    Returns:
+        JSON string with title, due dates, plain-text content, and a list of
+        attachments (name + url), or an error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
+
+        result = await call_edupage(
+            edupage_ctx,
+            get_homework_material,
+            edupage_ctx.edupage,
+            _base_url(edupage_ctx),
+            superid,
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in get_homework: {e}")
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def download_homework_file(
+    ctx: Context,
+    url: str,
+    filename: str | None = None,
+    dest_dir: str | None = None,
+) -> str:
+    """Download a homework attachment (from get_homework's attachments list) to disk.
+
+    Args:
+        url: Attachment URL as returned by get_homework.
+        filename: Optional filename override. Defaults to the original filename.
+        dest_dir: Optional directory to save into. If None, uses the
+            EDUPAGE_DOWNLOAD_DIR environment variable, or ~/Downloads/edupage-mcp
+            if that isn't set either. Created if it doesn't exist.
+
+    Returns:
+        JSON string with the saved local file path and size in bytes, or an
+        error message.
+    """
+    try:
+        edupage_ctx: EduPageContext = ctx.request_context.lifespan_context
+        full_url = url if url.startswith("http") else f"{_base_url(edupage_ctx)}{url}"
+        target_dir = Path(dest_dir).expanduser() if dest_dir else _default_download_dir()
+
+        path = await call_edupage(
+            edupage_ctx,
+            download_attachment,
+            edupage_ctx.edupage,
+            full_url,
+            target_dir,
+            filename,
+        )
+        return json.dumps(
+            {"path": str(path), "size_bytes": path.stat().st_size}, indent=2
+        )
+
+    except (BadCredentialsException, CaptchaException) as e:
+        return json.dumps({"error": f"Authentication error: {str(e)}"}, indent=2)
+    except Exception as e:
+        logger.exception(f"Error in download_homework_file: {e}")
         return json.dumps({"error": str(e)}, indent=2)
 
 
