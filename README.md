@@ -16,6 +16,10 @@ Supported tools:
 - `get_meals`
 - `get_substitutions`
 - `get_timetable_changes`
+- `get_homework`
+- `download_homework_file`
+
+`get_homework` and `download_homework_file` are not backed by `edupage-api` (which has no homework/material support); they parse EduPage's internal material-player page directly. Pass the `superid` from a homework notification's `additional_data` (see `get_notifications`) to `get_homework` to read the assignment text and list its attachments, then pass an attachment URL to `download_homework_file` to save it locally.
 
 Experimental tool:
 
@@ -113,11 +117,13 @@ Add this to your Claude Desktop MCP config:
 | `get_meals` | `date_str` | Meal menu for a date. Defaults to today. |
 | `get_substitutions` | `date_str` | Raw substitution rows for a date. Defaults to today. |
 | `get_timetable_changes` | `date_str` | Timetable changes for a date. Defaults to today. |
+| `get_homework` | `superid` | Full homework/material content (text + attachment list) for a homework notification. |
+| `download_homework_file` | `url`, `filename`, `dest_dir` | Download a homework attachment to disk. `dest_dir` overrides the default (`EDUPAGE_DOWNLOAD_DIR` env var, or `~/Downloads/edupage-mcp`). |
 | `get_missing_teachers` | `date_str` | Absent teachers for a date. Experimental. |
 
 ## Limitations
 
-- Read-only only
+- Read-only only (`download_homework_file` writes files to local disk, but does not submit or modify anything on EduPage)
 - No 2FA support
 - Parent and teacher accounts are not verified
 - Depends on upstream `edupage-api` behavior
