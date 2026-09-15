@@ -338,7 +338,7 @@ wheels = [
 
 [[package]]
 name = "edupage-mcp"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "." }
 dependencies = [
     { name = "edupage-api" },
@@ -349,7 +349,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "edupage-api" },
-    { name = "mcp", extras = ["cli"] },
+    { name = "mcp", extras = ["cli"], specifier = "<2" },
     { name = "python-dotenv" },
 ]
 provides-extras = ["dev"]
