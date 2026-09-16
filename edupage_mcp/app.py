@@ -7,6 +7,7 @@ from pathlib import Path
 
 from edupage_api.exceptions import BadCredentialsException, CaptchaException
 from edupage_api.substitution import TimetableChange
+from edupage_api.timeline import EventType
 from mcp.server.fastmcp import Context, FastMCP
 
 from .homework import download_attachment, get_homework_material
@@ -131,11 +132,39 @@ async def get_grades(
 
 
 @mcp.tool()
-async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
-    """Get timeline notifications, optionally filtered from a start date.
+async def get_notifications(
+    ctx: Context,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    event_type: str | None = None,
+    limit: int | None = None,
+) -> str:
+    """Get timeline notifications, with optional server-side filtering.
 
     Args:
         date_from: Start date in ISO format (YYYY-MM-DD). If None, returns recent notifications.
+        date_to: End date in ISO format (YYYY-MM-DD), inclusive. Only applied if date_from is set.
+        event_type: Comma-separated event type(s) to keep, e.g. "homework" or
+            "homework,etesthw". These are EduPage's internal codes (mostly
+            Slovak abbreviations). Common ones - code (meaning):
+            sprava (message), anketa (poll), news (news post),
+            bexam (big exam), homework (homework assignment),
+            oexam (oral exam), rexam (written exam/paper),
+            pexam (project exam), sexam (short exam/quiz),
+            testpridelenie (exam assigned), testvysledok (exam
+            result/grade published), etesthw (homework test assignment),
+            znamka (grade added), substitution (timetable substitution),
+            timetable (timetable change), ttcancel (lesson cancelled),
+            ospravedlnenka (absence excuse), student_absent (marked absent),
+            schoolevent (school event), trip (school trip),
+            excursion (excursion), holiday (holiday), freeday (free day),
+            parentsevening (parent-teacher evening), contest (contest),
+            strava_kredit (canteen credit), h_stravamenu (new canteen menu).
+            The full enum has ~70 values; any value accepted by the
+            underlying edupage_api.timeline.EventType works here, and each
+            returned event also includes an event_type_label field with a
+            human-readable name so you don't need to memorize these codes.
+        limit: Maximum number of events to return (most recent first).
 
     Returns:
         JSON string with list of timeline events or error message.
@@ -149,10 +178,41 @@ async def get_notifications(ctx: Context, date_from: str | None = None) -> str:
                 edupage_ctx.edupage.get_notification_history,
                 date.fromisoformat(date_from),
             )
+            if date_to:
+                end = date.fromisoformat(date_to)
+                notifications = [
+                    event for event in notifications if event.timestamp.date() <= end
+                ]
         else:
             notifications = await call_edupage(
                 edupage_ctx, edupage_ctx.edupage.get_notifications
             )
+
+        if event_type:
+            requested_types = {t.strip().lower() for t in event_type.split(",") if t.strip()}
+            valid_values = {e.value for e in EventType}
+            unknown = requested_types - valid_values
+            if unknown:
+                return json.dumps(
+                    {
+                        "error": f"Unknown event_type(s): {', '.join(sorted(unknown))}",
+                        "valid_values": sorted(valid_values),
+                    },
+                    indent=2,
+                )
+            notifications = [
+                event
+                for event in notifications
+                if event.event_type is not None
+                and event.event_type.value in requested_types
+            ]
+
+        notifications = sorted(
+            notifications, key=lambda event: event.timestamp, reverse=True
+        )
+
+        if limit is not None:
+            notifications = notifications[:limit]
 
         if not notifications:
             return json.dumps({"message": "No notifications available"}, indent=2)

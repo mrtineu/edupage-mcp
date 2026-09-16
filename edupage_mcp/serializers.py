@@ -37,10 +37,84 @@ def serialize_gender(gender: Gender | None) -> str | None:
     return gender.value
 
 
+EVENT_TYPE_LABELS: dict[str, str] = {
+    # Messages
+    EventType.MESSAGE.value: "Message",
+    EventType.POLL.value: "Poll",
+    EventType.NEWS.value: "News post",
+    # Exams / homework
+    EventType.BIG_EXAM.value: "Big exam (test/klasifikovana praca)",
+    EventType.HOMEWORK.value: "Homework assignment",
+    EventType.ORAL_EXAM.value: "Oral exam",
+    EventType.PAPER.value: "Written exam/paper",
+    EventType.PROJECT_EXAM.value: "Project exam",
+    EventType.SHORT_EXAM.value: "Short exam/quiz",
+    EventType.TESTING.value: "Testing",
+    EventType.EXAM_ASSIGNMENT.value: "Exam assigned",
+    EventType.EXAM_EVALUATION.value: "Exam result/grade published",
+    EventType.HOMEWORK_STUDENT_STATE.value: "Homework completion status update",
+    EventType.HOMEWORK_TEST.value: "Homework test assignment",
+    # Grades
+    EventType.GRADE.value: "Grade added",
+    EventType.GRADES_DOC.value: "Grade document published",
+    # Timetable / substitutions
+    EventType.SUBSTITUTION.value: "Timetable substitution",
+    EventType.TIMETABLE.value: "Timetable change",
+    EventType.TT_CANCEL.value: "Lesson cancelled",
+    EventType.CHANGE_ROOM.value: "Classroom changed",
+    EventType.BOOKED_ROOM.value: "Room booked",
+    EventType.LESSON.value: "Lesson",
+    EventType.CLASS_TEACHER_LESSON.value: "Class teacher lesson",
+    EventType.PROJECT_LESSON.value: "Project lesson",
+    EventType.TUTORING.value: "Tutoring lesson",
+    EventType.DISTANT_LEARNING.value: "Distance learning notice",
+    # Attendance
+    EventType.ARRIVAL_TO_SCHOOL.value: "Attendance check-in/out",
+    EventType.EXCUSED_LESSON.value: "Absence excuse",
+    EventType.STUDENT_ABSENT.value: "Student marked absent",
+    # School events / calendar
+    EventType.EVENT.value: "School calendar event",
+    EventType.SCHOOL_EVENT.value: "School event",
+    EventType.SCHOOL_TRIP.value: "School trip",
+    EventType.EXCURSION.value: "Excursion",
+    EventType.CULTURE.value: "Cultural event",
+    EventType.CONTEST.value: "Contest",
+    EventType.ALBUM.value: "Photo album",
+    EventType.FREE_DAY.value: "Free day",
+    EventType.HOLIDAY.value: "Holiday",
+    EventType.SHORT_HOLIDAY.value: "Short holiday",
+    EventType.PARENTS_EVENING.value: "Parent-teacher evening",
+    EventType.CLASSIFICATION_MEETING.value: "Classification meeting",
+    EventType.TEACHER_MEETING.value: "Teacher meeting",
+    EventType.CLASS_TEACHER_EVENT.value: "Class teacher event",
+    EventType.CLASS_BOOK.value: "Class book entry",
+    EventType.SAFETY_INSTRUCTIONING.value: "Safety instruction briefing",
+    EventType.PROJECT.value: "Project",
+    EventType.PROCESS.value: "Administrative process",
+    EventType.REPRESENTATION.value: "Representation (competition/event)",
+    EventType.CONFIRMATION.value: "Confirmation request",
+    # Canteen
+    EventType.FOOD_CREDIT.value: "Canteen account credit",
+    EventType.FOOD_SERVED.value: "Meal served",
+    EventType.NEW_MENU.value: "New canteen menu",
+}
+# EventType has ~70 members in total; anything starting with H_ (e.g.
+# h_clearcache, h_settings, h_userphoto) is an internal EduPage system/cache
+# event and is intentionally left unlabeled here - it won't normally appear
+# in a user-facing notification feed. Unlabeled codes fall back to the raw
+# code in describe_event_type below.
+
+
 def serialize_event_type(event_type: EventType | None) -> str | None:
     if event_type is None:
         return None
     return event_type.value
+
+
+def describe_event_type(event_type: EventType | None) -> str | None:
+    if event_type is None:
+        return None
+    return EVENT_TYPE_LABELS.get(event_type.value, event_type.value)
 
 
 def serialize_action(action: Action | tuple[int, int] | None) -> str | list[int] | None:
@@ -158,6 +232,7 @@ def serialize_timeline_event(event: TimelineEvent) -> dict[str, object]:
         "author": serialize_account(event.author),
         "recipient": serialize_account(event.recipient),
         "event_type": serialize_event_type(event.event_type),
+        "event_type_label": describe_event_type(event.event_type),
         "additional_data": event.additional_data,  # pyright: ignore[reportUnknownMemberType]
     }
 
